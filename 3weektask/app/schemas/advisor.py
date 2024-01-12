@@ -103,18 +103,22 @@ class AdvisorList(BaseModel):
     bio: Optional[str] = Field(None, example="A short bio here")
 class AdvisorDetailed(BaseModel):
     id: int
-    name: Optional[str] = Field(None, example="John Doe")
-    bio: Optional[str] = Field(None, example="A short bio here")
-    experience: str = Field(..., example="5 years of experience")
-    about: Optional[str] = Field(None, example="More details about the advisor")
-    textReadingStatus: Optional[bool] = Field(True)
-    textReadingPrice: Optional[float] = Field(None, example=10.0)
-    audioReadingStatus: Optional[bool] = Field(True)
-    audioReadingPrice: Optional[float] = Field(None, example=20.0)
-    videoReadingStatus: Optional[bool] = Field(True)
-    videoReadingPrice: Optional[float] = Field(None, example=30.0)
-    liveTextChatStatus: Optional[bool] = Field(True)
-    liveTextChatPrice: Optional[float] = Field(None, example=40.0)
+    name: Optional[str]   
+    experience: Optional[str] 
+    about: Optional[str]
+    rating: Optional[float]
+    readings :Optional[int]
+    complete :Optional[int]
+    uncomplete :Optional[int]
+    ontime :Optional[float] = None 
+    textReadingStatus: Optional[bool]
+    textReadingPrice: Optional[float]
+    audioReadingStatus: Optional[bool]
+    audioReadingPrice: Optional[float] 
+    videoReadingStatus: Optional[bool]
+    videoReadingPrice: Optional[float] 
+    liveTextChatStatus: Optional[bool] 
+    liveTextChatPrice: Optional[float] 
 
 # 顾问返回信息模型，继承自顾问基础模型
 class Advisor(AdvisorBase):

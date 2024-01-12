@@ -47,7 +47,7 @@ class UserCreateOut(UserCreate):
 # 用户登录模型
 class UserLogin(BaseModel):
     mobile: str = Field(..., example="13812345678")
-    password: str = Field(..., example="supersecretpassword")
+    hashed_password: str = Field(..., example="supersecretpassword")
 
 # 用户修改信息模型，继承自用户基础模型
 class UserUpdate(UserBase):

@@ -1,9 +1,15 @@
+#app/api/api_v1/endpoints/advisor.py
+'''
+和顾问有关的API
+'''
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.responses import Response
 from datetime import timedelta
 from app.crud.crud_advisor import get_advisor_by_mobile, create_advisor,update_advisor,update_advisor_workstatus,update_advisor_servicesetting,get_advisor
+from app.crud.crud_order import ad_get_order_detail,make_order_response
 from app.schemas.advisor import AdvisorCreate,AdvisorUpdate,AdvisorUpdateWorkstatus,AdvisorServiceSetting
+from app.schemas.order import OrderInfo,AdvisorResponse,ResponseContent
 from app.api.deps import get_async_db
 from app.core.security import verify_password, create_access_token,get_current_advisor
 
@@ -109,5 +115,31 @@ async def advisor_update_servicesetting(
     advisor = await update_advisor_servicesetting(db=db, advisor_id=advisor_id, advisor_in=advisor_in)
     return advisor
 
+#  顾问获取某个订单详细信息
+@router.get("/orders/{order_id}/details", response_model=OrderInfo)
+async def order_details_get(
+        order_id: int,
+        current_advisor: dict = Depends(get_current_advisor),
+        db: AsyncSession = Depends(get_async_db)
+):
+    advisor_id = current_advisor.get("advisor_id")
+    if advisor_id is None:
+        raise HTTPException(status_code=400, detail="Invalid advisor ID.")
+    detail = await ad_get_order_detail(db=db,advisor_id=advisor_id , order_id=order_id)
 
+    return detail
+# 顾问回复订单
+@router.patch("/orders/{order_id}/respond", response_model=ResponseContent)
+async def order_response_make(
+        order_id: int,
+        response_in: AdvisorResponse,  # 接收的请求体
+        current_advisor: dict = Depends(get_current_advisor),
+        db: AsyncSession = Depends(get_async_db)  # 数据库依赖
+):
+    advisor_id = current_advisor.get("advisor_id")
+    if advisor_id is None:
+        raise HTTPException(status_code=400, detail="Invalid advisor ID.")
+    response = await make_order_response(db=db, advisor_id = advisor_id,order_id=order_id,new_response = response_in.response)
+
+    return response
 

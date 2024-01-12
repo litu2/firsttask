@@ -1,11 +1,13 @@
 #app/crud/crud_advisor.py
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.advisor import Advisor
-from app.schemas.advisor import AdvisorCreate,AdvisorUpdate,AdvisorUpdateWorkstatus,AdvisorServiceSetting,AdvisorOut
+from app.models.comment import Comment
+from app.schemas.advisor import AdvisorCreate,AdvisorUpdate,AdvisorUpdateWorkstatus,AdvisorServiceSetting,AdvisorOut,AdvisorDetailed
 from app.core.security import get_password_hash
 from sqlalchemy import update
 from fastapi import HTTPException
 from sqlalchemy.future import select
+from sqlalchemy.sql import func
 
 #根据手机号查询顾问
 async def get_advisor_by_mobile(db: AsyncSession,mobile: str):
@@ -131,7 +133,43 @@ async def get_advisor_detail(db:AsyncSession,advisor_id :int):
     # 查询指定ID的顾问详细信息
     result = await db.execute(select(Advisor).where(Advisor.id == advisor_id))
     advisor = result.scalar_one_or_none()
-
+    
     if advisor is None:
         raise HTTPException(status_code=404, detail="Advisor not found")
-    return advisor
+
+    ontime = None
+    if advisor.complete is not None and advisor.uncomplete is not None:
+        ontime = advisor.complete / (advisor.complete + advisor.uncomplete)
+    # 查询顾问的评分记录并计算平均评分
+    result = await db.execute(
+        select(func.avg(Comment.rating))
+        .where(Comment.advisor_id == advisor_id)
+    )
+
+
+    average_rating = result.scalar_one_or_none()
+    #import pdb; pdb.set_trace();  
+    advisor_detail = AdvisorDetailed(
+        id=advisor.id,
+        name=advisor.name,
+        experience=advisor.experience,
+        about= advisor.about,
+        readings= advisor.readings,
+        rating= average_rating,
+        complete=advisor.complete,
+        uncomplete=advisor.uncomplete,
+        ontime=ontime,
+        textReadingStatus=advisor.textReadingStatus,
+        textReadingPrice=advisor.textReadingPrice,
+        audioReadingStatus=advisor.audioReadingStatus,
+        audioReadingPrice=advisor.audioReadingPrice,
+        videoReadingStatus=advisor.videoReadingStatus,
+        videoReadingPrice=advisor.videoReadingPrice,
+        liveTextChatStatus=advisor.liveTextChatStatus,
+        liveTextChatPrice=advisor.liveTextChatPrice
+    )
+   
+    return advisor_detail
+
+
+

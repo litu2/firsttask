@@ -43,6 +43,8 @@ class Advisor(Base):
     readings = Column(Integer, default=0)
     #完成订单数
     complete = Column(Integer, default=0)
+    #超时订单数
+    uncomplete = Column(Integer, default=0)
     #评分
     rating = Column(Float, default=0)
     #评论数

@@ -16,8 +16,9 @@ async def get_user_by_mobile(db: AsyncSession, mobile: str):
     # 执行异步查询
     result = await db.execute(stmt)
     # 通过调用 .scalars().first() 来获得第一个结果
-    user =  result.first()
+    user =  result.scalars().first()
     # 返回用户对象或: None（如果没有找到任何用户）
+    #print(user)
     return user
 
 
