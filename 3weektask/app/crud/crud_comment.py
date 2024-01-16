@@ -6,9 +6,23 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.comment import Comment
 from app.models.order import Order
-from app.schemas.comment import CommentCreate
+from app.models.user import User
+from app.schemas.comment import CommentCreate,CommentList
 from fastapi import HTTPException
 from sqlalchemy.future import select
+import redis
+import json
+from datetime import datetime
+redis_conn = redis.Redis(host='localhost', port=6379, db=1)
+
+
+class CommentListEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
+
 async def create_comment(db:AsyncSession,user_id:int,order_id:int,comment_in:CommentCreate):
     result = await db.execute(
                 select(Comment)
@@ -39,6 +53,50 @@ async def create_comment(db:AsyncSession,user_id:int,order_id:int,comment_in:Com
         return comment
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+async def get_comment(db: AsyncSession,advisor_id:int):
+    redis_key = f"comments:{advisor_id}"
+    cached_data =  redis_conn.get(redis_key)
+    
+    if cached_data:
+        comment_list = json.loads(cached_data.decode())
+
+        return comment_list
+    data = await db.execute(select(Comment).where(Comment.advisor_id==advisor_id))
+    comment_data = data.scalars().all()
+
+    if not comment_data:
+        raise HTTPException(status_code=404,detail="comment not found!")
+    
+    comment_list = []
+
+    for comment in comment_data:
+        user  =  await db.get(User,comment.user_id)
+        #user  = user.scalars().first()
+        username = user.name if user.name else "Unknown User"
+        '''
+        comment_list.append(
+            CommentList(
+                username=username,
+                context=comment.context,
+                rating=comment.rating,
+                create_at=comment.create_at,
+            )
+        )
+        '''
+        comment_entry = CommentList(
+            username=username,
+            context=comment.context,
+            rating=comment.rating,
+            create_at=comment.create_at,
+        )
+        comment_list.append(comment_entry.dict())
+    comment_list_json = json.dumps(comment_list, cls=CommentListEncoder)
+    redis_conn.set(redis_key,comment_list_json,ex=3600)
+
+    return comment_list
+         
 
 
 

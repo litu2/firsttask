@@ -13,6 +13,10 @@ from app.schemas.order import OrderCreate,OrderDisplay,OrderDetail,OrderInfo,Res
 from sqlalchemy.future import select
 from fastapi import HTTPException
 from datetime import datetime
+import redis
+import json
+# 创建 Redis 连接
+redis_conn = redis.Redis(host='localhost', port=6379, db=1)
 # 用户金币流
 async def create_coinflow_user(db: AsyncSession,Order_id:int,Is_income:bool,Notes:str,created_at=None):
     order = await db.get(Order,Order_id)
@@ -161,7 +165,16 @@ async def get_user_orders(db: AsyncSession, user_id: int):
         # 重新抛出异常以便调用者可以处理
         raise e
 
+
+
 async def get_order_detail(db: AsyncSession,user_id:int , order_id:int)-> OrderDetail:
+    # 检查 Redis 缓存中是否存在订单详情数据
+    cache_key = f"order_detail:{order_id}"
+    cached_data = redis_conn.get(cache_key)
+    if cached_data:
+        cached_data = json.loads(cached_data.decode())  # 将字节串转换为字典
+        # 如果缓存中存在数据，直接返回缓存数据
+        return OrderDetail(**cached_data)
     # 查询订单
     order_result = await db.execute(
         select(Order).where((Order.user_id == user_id) & (Order.order_id == order_id))
@@ -180,7 +193,7 @@ async def get_order_detail(db: AsyncSession,user_id:int , order_id:int)-> OrderD
     advisor_name = advisor.name if advisor else None
 
     # 构建并返回OrderDetail对象
-    return OrderDetail(
+    order_detail = OrderDetail(
         order_Id=order.order_id,  # 注意属性名大小写需与OrderDetail模型一致
         advisor_Name=advisor_name,
         basic_Info=order.basic_info,
@@ -194,6 +207,10 @@ async def get_order_detail(db: AsyncSession,user_id:int , order_id:int)-> OrderD
         created_At=order.created_at,
         updated_At=order.updated_at
     )
+
+    redis_conn.set(cache_key,order_detail.json(),ex=3600)
+
+    return order_detail
 
 
 async def ad_get_order_detail(db: AsyncSession,advisor_id:int , order_id:int)->OrderInfo:

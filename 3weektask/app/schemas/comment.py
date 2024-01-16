@@ -16,5 +16,16 @@ class CommentCreate(BaseModel):
 
     context: Optional[str] = Field(...,example="这个顾问回答地很棒")
     rating: Optional[float] = Field(...,example="5.0")
+
+
+class CommentList(BaseModel):
+
+    username : str 
+
+    context : str
+
+    rating : float
+
+    create_at : datetime
      
 

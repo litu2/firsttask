@@ -10,7 +10,7 @@ from datetime import timedelta
 from app.crud.crud_user import get_user_by_mobile, create_user,update_user
 from app.crud.crud_advisor import get_advisors_after_cursor,get_paged_advisors,get_advisor_detail
 from app.crud.crud_order import create_order, get_user_orders,get_order_detail,create_coinflow_user
-from app.crud.crud_comment import create_comment
+from app.crud.crud_comment import create_comment,get_comment
 from app.crud.crud_tip import create_tip
 from app.crud.crud_favorite import create_favorite, get_favorite
 from app.crud.crud_coinflow_user import get_user_coinflow
@@ -18,7 +18,7 @@ from app.crud.crud_coinflow_user import get_user_coinflow
 from app.schemas.user import UserCreate,UserLogin,UserUpdate,UserCreateOut
 from app.schemas.advisor import AdvisorList,AdvisorDetailed
 from app.schemas.order import OrderCreate,OrderDisplay,OrderDetail
-from app.schemas.comment import CommentCreate
+from app.schemas.comment import CommentCreate,CommentList
 from app.schemas.tip import TipCreate
 from app.schemas.coinflow_user import UsercoinFlow
 
@@ -165,7 +165,7 @@ async def order_detail_get(
 
 
 # 用户评分&评论接口
-@router.post("/comment",description= "用户评分，评论")
+@router.post("/comment",description = "用户评分，评论")
 async def comment_create(comment_in: CommentCreate,order_id: int,current_user: dict = Depends(get_current_user),db: AsyncSession = Depends(get_async_db)):
     # 从token中解析出当前用户id
     user_id = current_user.get("user_id")
@@ -175,6 +175,20 @@ async def comment_create(comment_in: CommentCreate,order_id: int,current_user: d
     comment = await create_comment(db=db,user_id=int(user_id),order_id=order_id,comment_in=comment_in)
 
     return comment
+
+
+# 用户查看评分&评论接口
+@router.get("/comment/{advisor_id}",description = "查看评分，评论")
+async def comment_get(advisor_id:int,db: AsyncSession = Depends(get_async_db),current_user: dict = Depends(get_current_user)):
+    # 从token中解析出当前用户id
+    user_id = current_user.get("user_id")
+    if user_id is None:
+        raise HTTPException(status_code=400, detail="Invalid user ID.")
+
+    comment = await get_comment(db=db,advisor_id=advisor_id)
+
+    return comment
+
 
 
 # 用户打赏接口
