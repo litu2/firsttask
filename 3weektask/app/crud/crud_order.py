@@ -8,11 +8,12 @@ from app.models.order import Order
 from app.models.user import User
 from app.models.advisor import Advisor
 from app.models.coinflow_user import Coinflow_user
+from app.models.coinflow_advisor import Coinflow_advisor
 from app.schemas.order import OrderCreate,OrderDisplay,OrderDetail,OrderInfo,ResponseContent,OrderStatus
 from sqlalchemy.future import select
 from fastapi import HTTPException
 from datetime import datetime
-
+# 用户金币流
 async def create_coinflow_user(db: AsyncSession,Order_id:int,Is_income:bool,Notes:str,created_at=None):
     order = await db.get(Order,Order_id)
     #order = order.scalars().all()
@@ -42,7 +43,7 @@ async def create_coinflow_user(db: AsyncSession,Order_id:int,Is_income:bool,Note
     return {"msg":"下单成功！！"}
 
 
-
+# 用户下单
 async def create_order(db: AsyncSession, user_id: int, advisor_id: int, order_in: OrderCreate):
     try:
         async with db.begin():
@@ -80,14 +81,10 @@ async def create_order(db: AsyncSession, user_id: int, advisor_id: int, order_in
             # 更新advisor表中的readings字段
             advisor = await db.get(Advisor, advisor_id)
             advisor.readings += 1
-        # 提交会话以保存订单和更新用户金币余额
-        await db.commit()
+        
 
-        # 刷新对象以确保数据已更新
-        await db.refresh(order)
-        
-        # 返回创建的订单对象
-        
+        await db.commit()
+        await db.refresh(order)        
         return order.order_id
 
     except Exception as e:
@@ -225,6 +222,8 @@ async def ad_get_order_detail(db: AsyncSession,advisor_id:int , order_id:int)->O
         response = order.response
     )
 
+
+# 顾问调用，用于回复订单
 async def make_order_response(db: AsyncSession, advisor_id:int , order_id:int,new_response:str):
     # 在数据库中查找指定的订单
     order_select = select(Order).where(Order.order_id == order_id)
@@ -257,21 +256,37 @@ async def make_order_response(db: AsyncSession, advisor_id:int , order_id:int,ne
     order.status = "completed"
 
 
-
+    # 统计订单金额
+    Amount = 0
     # 获取对应的顾问对象
     advisor = await db.get(Advisor, advisor_id)
     # 使顾问的amount值增加，并根据订单是否紧急增加ext_amount
     if order.is_urgent  and order.is_urgent_ex==0:
+        Amount += order.ext_amount
         advisor.coin += order.ext_amount
     advisor.coin += order.amount
+    Amount += order.amount
     # 使顾问的complete值加1
     advisor.complete += 1
+    
+    # 创建advisor金币流
+
+    coinflow = Coinflow_advisor(
+            advisor_id = advisor_id,
+            order_id = order_id,
+            amount = Amount,
+            is_income = True,
+            notes = "Order response fees"
+            )
+
+    db.add(coinflow)
 
 
     # 进行保存操作
     await db.commit()
     # 返回包含更新后的响应的实例
-    return ResponseContent(response=new_response)
+    #return ResponseContent(response=new_response)
+    return {"msg":"回复成功！"}
    
 
 

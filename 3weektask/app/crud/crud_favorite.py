@@ -29,12 +29,13 @@ async def create_favorite(db:AsyncSession,user_id:int,advisor_id:int):
 async def get_favorite(db:AsyncSession,user_id:int):
     #import pdb; pdb.set_trace();
     favorites = await db.execute(select(Favorite).filter(Favorite.user_id == user_id))
+    favorites = favorites.scalars().all()
     if not favorites:
-        raise {"msg":"暂无一人"} 
+        return {"msg":"暂无一人"} 
     
     favorites_result = []
 
-    for favorite in favorites.scalars().all():
+    for favorite in favorites:
         advisor = await db.execute(select(Advisor).filter(Advisor.id == favorite.advisor_id))
         advisor_info = advisor.scalars().first()
         

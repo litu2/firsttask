@@ -22,7 +22,8 @@ async def create_comment(db:AsyncSession,user_id:int,order_id:int,comment_in:Com
     # 首先根据 order_id 查出 advisor_id   
     advisor_id = await db.execute(select(Order.advisor_id).filter(Order.order_id == order_id)) 
     advisor_id = advisor_id.scalars().first()
-
+    if not advisor_id :
+        raise HTTPException(status_code=400,detail="unable advisor_id!")
     try:
 
         comment = Comment(user_id = user_id,

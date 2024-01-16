@@ -8,6 +8,7 @@ from fastapi.responses import Response
 from datetime import timedelta
 from app.crud.crud_advisor import get_advisor_by_mobile, create_advisor,update_advisor,update_advisor_workstatus,update_advisor_servicesetting,get_advisor
 from app.crud.crud_order import ad_get_order_detail,make_order_response
+from app.crud.crud_coinflow_advisor import get_ad_coinflow
 from app.schemas.advisor import AdvisorCreate,AdvisorUpdate,AdvisorUpdateWorkstatus,AdvisorServiceSetting
 from app.schemas.order import OrderInfo,AdvisorResponse,ResponseContent
 from app.api.deps import get_async_db
@@ -26,7 +27,10 @@ async def advisor_register(advisor_in: AdvisorCreate, db: AsyncSession = Depends
             detail="Mobile already registered."
         )
     advisor_out = await create_advisor(db=db, advisor=advisor_in)  # 调用异步函数创建用户
-    return advisor_out
+    if not advisor_out:
+        return {"msg":"注册失败！"}
+
+    return {"msg":"注册成功！"}
 
 
 
@@ -116,7 +120,7 @@ async def advisor_update_servicesetting(
     return advisor
 
 #  顾问获取某个订单详细信息
-@router.get("/orders/{order_id}/details", response_model=OrderInfo)
+@router.get("/orders/details/{order_id}", response_model=OrderInfo)
 async def order_details_get(
         order_id: int,
         current_advisor: dict = Depends(get_current_advisor),
@@ -129,7 +133,7 @@ async def order_details_get(
 
     return detail
 # 顾问回复订单
-@router.patch("/orders/{order_id}/respond", response_model=ResponseContent)
+@router.patch("/orders/respond/{order_id}", response_model=ResponseContent)
 async def order_response_make(
         order_id: int,
         response_in: AdvisorResponse,  # 接收的请求体
@@ -142,4 +146,23 @@ async def order_response_make(
     response = await make_order_response(db=db, advisor_id = advisor_id,order_id=order_id,new_response = response_in.response)
 
     return response
+
+
+# 顾问查看自己金币流
+@router.get("/get_ad_coinflow")
+async def coinflow_ad_get(
+        current_advisor: dict = Depends(get_current_advisor),
+        db: AsyncSession = Depends(get_async_db)
+):
+
+    advisor_id = current_advisor.get("advisor_id")
+    if advisor_id is None:
+        raise HTTPException(status_code=400, detail="Invalid advisor ID.")
+    coinflow = await get_ad_coinflow(db=db,advisor_id=int(advisor_id))
+    return coinflow
+
+
+
+
+
 

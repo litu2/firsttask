@@ -43,7 +43,6 @@ class AdvisorBase(BaseModel):
         use_enum_values = True  # 使枚举字段返回值
 
 class AdvisorOut(BaseModel):
-    id: int
     name: Optional[str] = Field(None)
     bio: Optional[str] = Field(None)
     workstatus: Optional[Workstatus] = Field(None)
@@ -54,6 +53,15 @@ class AdvisorOut(BaseModel):
     readings: Optional[int] = Field()
     complete: Optional[int] = Field()
     commentCount: Optional[int] = Field()
+    textReadingStatus: Optional[bool] = Field(True)
+    textReadingPrice: Optional[float] = Field(None, example=50)
+    audioReadingStatus: Optional[bool] = Field(True)
+    audioReadingPrice: Optional[float] = Field(None, example=20.0)
+    videoReadingStatus: Optional[bool] = Field(True)
+    videoReadingPrice: Optional[float] = Field(None, example=30.0)
+    liveTextChatStatus: Optional[bool] = Field(True)
+    liveTextChatPrice: Optional[float] = Field(None, example=40.0)
+
 
     coin: Optional[float] = Field()
     class Config:
@@ -76,12 +84,11 @@ class AdvisorLogin(BaseModel):
 
 
 # 顾问修改信息模型，继承自顾问基础模型
-class AdvisorUpdate(AdvisorBase):
+class AdvisorUpdate(BaseModel):
     name: Optional[str] = Field(None, example="John Doe")
     experience: str = Field(..., example="5 years of experience")
     bio: Optional[str] = Field(None, example="A short bio here")
     about: Optional[str] = Field(None, example="More details about the advisor")
-
 # 顾问修改服务状态模型
 class AdvisorServiceSetting(BaseModel):
     textReadingStatus: Optional[bool] = Field(True)

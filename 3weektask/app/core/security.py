@@ -6,18 +6,24 @@ from passlib.context import CryptContext
 from jose.exceptions import JWTError
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import  Depends, HTTPException, status
+
+
 # 设置用于JWT的密码学签名密钥
 SECRET_KEY = "rPW56wnL3ioy5HEHuD3VR2OQGGSHEBbGpZWRJ9yFKoYF"
 ALGORITHM = "HS256"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+# 密码哈希
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
+# 密码校验
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
+# 创建token
 def create_access_token(subject: str, expires_delta: Optional[timedelta] = None) -> str:
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
@@ -28,8 +34,8 @@ def create_access_token(subject: str, expires_delta: Optional[timedelta] = None)
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+# 校验解析user的token
 def get_current_user(token: str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
@@ -37,9 +43,10 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         if user_id is None:
             raise HTTPException(status_code=400, detail="Invalid token payload")
         return {"user_id": user_id}
-    except jwt.PyJWTError:
+    except jwt.JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+# 校验解析advisor的token
 def get_current_advisor(token: str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
@@ -47,7 +54,7 @@ def get_current_advisor(token: str = Depends(oauth2_scheme)):
         if advisor_id is None:
             raise HTTPException(status_code=400, detail="Invalid token payload")
         return {"advisor_id": advisor_id}
-    except jwt.PyJWTError:
+    except jwt.JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 

@@ -13,7 +13,7 @@ from app.crud.crud_order import create_order, get_user_orders,get_order_detail,c
 from app.crud.crud_comment import create_comment
 from app.crud.crud_tip import create_tip
 from app.crud.crud_favorite import create_favorite, get_favorite
-#from app.crud.crud_coinflow_user import get_user_coinflow
+from app.crud.crud_coinflow_user import get_user_coinflow
 
 from app.schemas.user import UserCreate,UserLogin,UserUpdate,UserCreateOut
 from app.schemas.advisor import AdvisorList,AdvisorDetailed
@@ -29,9 +29,10 @@ from typing import List
 
 router = APIRouter()
 
-#用户注册接口
+# 用户注册接口
 @router.post("/register",description="用户注册")
 async def user_register(user_in: UserCreate, db: AsyncSession = Depends(get_async_db)):
+    #import pdb; pdb.set_trace(); 
     # 检查用户是否已经存在
     user = await get_user_by_mobile(db, mobile=user_in.mobile)
     if user:
@@ -39,9 +40,7 @@ async def user_register(user_in: UserCreate, db: AsyncSession = Depends(get_asyn
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Mobile already registered."
         )
-    
-    # 返回数据处理
-    
+       
     user_out = await create_user(db=db, user=user_in)  
     return user_out
 
@@ -49,10 +48,9 @@ async def user_register(user_in: UserCreate, db: AsyncSession = Depends(get_asyn
 # 用户登录接口
 @router.post("/login",description="用户登录")
 async def user_login(user_in: UserLogin, db: AsyncSession = Depends(get_async_db)):
-    # 根据用户提供的信息查询用户
+    # 查询用户
     user = await get_user_by_mobile(db, mobile=user_in.mobile)
-
-    # 检查用户是否存在，并验证密码
+    # 检查用户，验证密码
     if not user or not verify_password(user_in.hashed_password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -61,18 +59,18 @@ async def user_login(user_in: UserLogin, db: AsyncSession = Depends(get_async_db
 
     # 创建访问令牌
     access_token = create_access_token(subject=user.id, expires_delta=timedelta(minutes=60*24*7))
-
     # 创建响应对象，设置响应头
     response = Response()
     response.headers["Authorization"] = f"Bearer {access_token}"
     response.headers["token_type"] = "bearer"
 
-    # 返回响应
+  
     return response
 
 
 # 用户修改个人信息接口
-@router.put("/update",response_model=UserUpdate,description="用户修改个人信息")
+#@router.put("/update",response_model=UserUpdate,description="用户修改个人信息")
+@router.put("/update",description="用户修改个人信息")
 async def user_update(user_in:UserUpdate,
                       db:AsyncSession = Depends(get_async_db),
                       current_user:dict =Depends(get_current_user)
@@ -85,6 +83,7 @@ async def user_update(user_in:UserUpdate,
     # 调用数据库操作函数更新用户资料,要求传入用户ID和新的用户信息
     user = await update_user(db=db, user_id=user_id, user_in=user_in)
     return user
+
 
 # 用户获取顾问列表接口
 @router.get("/get_advisor",response_model=List[AdvisorList],description="获取顾问列表")
@@ -100,6 +99,7 @@ async def user_getadvisorlist(
         advisors = await get_paged_advisors(db=db, page=1, page_size=limit)
     return [AdvisorList(id=advisor.id,name=advisor.name, bio=advisor.bio) for advisor in advisors]
 
+
 # 用户查看顾问主页接口
 @router.get("/advisor/{advisor_id}", response_model=AdvisorDetailed,description= "查看顾问主页")
 async def advisor_detail(
@@ -110,8 +110,9 @@ async def advisor_detail(
     
     return advisordetail    
 
+
 # 用户下单
-@router.post("/place_order/{advisor_id}")
+@router.post("/place_order/{advisor_id}",description= "用户下单")
 async def place_an_order(
         order_in : OrderCreate,
         advisor_id: int = Path(..., title="The ID of the advisor to get details for"),
@@ -132,9 +133,8 @@ async def place_an_order(
     return order
 
 
-
 # 用户查看订单
-@router.get("/get_orders",response_model=List[OrderDisplay])
+@router.get("/get_orders",response_model=List[OrderDisplay],description= "用户查看订单")
 async def orders_user_get(db:AsyncSession =Depends(get_async_db),current_user:dict =Depends(get_current_user)):
     # 从current_user字典中获取用户ID
     user_id = current_user.get("user_id")
@@ -144,8 +144,9 @@ async def orders_user_get(db:AsyncSession =Depends(get_async_db),current_user:di
     order = await get_user_orders(db=db,user_id=user_id)
     return order
 
+
 # 用户查看订单详情
-@router.get("/get_orders/{order_id}",response_model=OrderDetail)
+@router.get("/get_orders/{order_id}",response_model=OrderDetail,description= "用户查看订单详情")
 async def order_detail_get(
         order_id: int,
         current_user: dict = Depends(get_current_user),
@@ -164,7 +165,7 @@ async def order_detail_get(
 
 
 # 用户评分&评论接口
-@router.post("/comment")
+@router.post("/comment",description= "用户评分，评论")
 async def comment_create(comment_in: CommentCreate,order_id: int,current_user: dict = Depends(get_current_user),db: AsyncSession = Depends(get_async_db)):
     # 从token中解析出当前用户id
     user_id = current_user.get("user_id")
@@ -177,7 +178,7 @@ async def comment_create(comment_in: CommentCreate,order_id: int,current_user: d
 
 
 # 用户打赏接口
-@router.post("/tip")
+@router.post("/tip",description= "用户打赏")
 async def tip_create(tip_in: TipCreate,order_id: int ,current_user: dict = Depends(get_current_user),db: AsyncSession = Depends(get_async_db)):
     # 从token中解析出当前用户ID
     user_id = current_user.get("user_id")
@@ -194,7 +195,7 @@ async def tip_create(tip_in: TipCreate,order_id: int ,current_user: dict = Depen
 
 # 用户收藏接口
 
-@router.post("/advisor/favorite")
+@router.post("/favorite",description= "用户收藏")
 async def favorite_create(advisor_id: int,current_user: dict = Depends(get_current_user),db: AsyncSession = Depends(get_async_db)):
      # 从token中解析出当前用户id
      user_id = current_user.get("user_id")
@@ -206,7 +207,7 @@ async def favorite_create(advisor_id: int,current_user: dict = Depends(get_curre
      return favorite
 
 # 用户查看收藏列表
-@router.get("/get_favorite")
+@router.get("/get_favorite",description= "查看收藏列表")
 async def favorate_get(db: AsyncSession = Depends(get_async_db),current_user: dict = Depends(get_current_user)):
     # 从token中解析出当前用户id
     #import pdb; pdb.set_trace();
@@ -219,13 +220,13 @@ async def favorate_get(db: AsyncSession = Depends(get_async_db),current_user: di
     return favorite
 
 # 用户金币流接口
-@router.get("coinflow")
+@router.get("/coinflow",description= "查看用户金币流")
 async def conflow_get(db: AsyncSession = Depends(get_async_db),current_user: dict = Depends(get_current_user)):
     user_id = current_user.get("user_id")
     if user_id is None:
         raise HTTPException(status_code=400, detail="Invalid user ID.")
 
-    coinflow = await get_user_coinflow(db=db,user_id=user_id)
+    coinflow = await get_user_coinflow(db=db,user_id=int(user_id))
 
     return coinflow
 

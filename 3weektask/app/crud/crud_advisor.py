@@ -11,23 +11,22 @@ from sqlalchemy.sql import func
 
 #根据手机号查询顾问
 async def get_advisor_by_mobile(db: AsyncSession,mobile: str):
-    #准备异步查询
+    
     stmt = select(Advisor).filter(Advisor.mobile == mobile)
-    #执行异步查询
     result = await db.execute(stmt)
-    #获取结果
     advisor = result.scalars().first()
-    #返回查询结果
+    
     return advisor
 
 #创建顾问
 async def create_advisor(db:AsyncSession,advisor:AdvisorCreate)->Advisor:
     hashed_password = get_password_hash(advisor.password)#对顾问的密码进行哈希处理
-    db_advisor = Advisor(mobile=advisor.mobile,hashed_password=hashed_password)#创建advisor模型
-    db.add(db_advisor)#添加数据到数据库
-    await db.commit()#提交事务
-    await db.refresh(db_advisor)#刷新对象状态
-    return db_advisor#返回已创建对象
+    db_advisor = Advisor(mobile=advisor.mobile,hashed_password=hashed_password)
+    db.add(db_advisor)
+
+    await db.commit()
+    await db.refresh(db_advisor)
+    return db_advisor
 
 #更新顾问数据
 async def update_advisor(db:AsyncSession, advisor_id :int,advisor_in :AdvisorUpdate):
@@ -50,7 +49,7 @@ async def update_advisor(db:AsyncSession, advisor_id :int,advisor_in :AdvisorUpd
     await db.refresh(advisor)
     return AdvisorUpdate(**advisor_data)
 
-#获取顾问主页数据
+# 获取顾问主页数据
 async def get_advisor(db:AsyncSession, advisor_id :int)->AdvisorOut:
     #根据id获取数据
     result = await db.execute(select(Advisor).filter(Advisor.id == advisor_id))
@@ -99,7 +98,7 @@ async def update_advisor_servicesetting(db: AsyncSession, advisor_id: int, advis
 
     # 构建 SQL UPDATE 语句
     update_stmt = (
-        update(Advisor).where(Advisor.id == advisor_id).values(**update_values)
+        update(Advisor).filter(Advisor.id == advisor_id).values(**update_values)
     )
 
     # 在数据库中执行更新操作
@@ -113,6 +112,9 @@ async def update_advisor_servicesetting(db: AsyncSession, advisor_id: int, advis
     return {"status": "success", "message": "Advisor service settings updated successfully"}
 
 
+
+
+# 用户API调用 分页获取顾问列表
 async def get_paged_advisors(db: AsyncSession, page: int, page_size: int = 4):
     # 计算要跳过的记录数
     skip = (page - 1) * page_size
@@ -122,23 +124,27 @@ async def get_paged_advisors(db: AsyncSession, page: int, page_size: int = 4):
     advisors = result.all()
     return advisors
 
+
+# 用户API调用 获取光标后的顾问列表
 async def get_advisors_after_cursor(db: AsyncSession, cursor_id: int, limit: int = 4):
     result = await db.execute(
-        select(Advisor.id,Advisor.name,Advisor.bio).where(Advisor.id > cursor_id).order_by(Advisor.id).limit(limit)
+            select(Advisor.id,Advisor.name,Advisor.bio).filter(Advisor.id > cursor_id).order_by(Advisor.id).limit(limit)
     )
     advisors = result.all()
     return advisors
 
+
+# 获取顾问主页信息
 async def get_advisor_detail(db:AsyncSession,advisor_id :int):
     # 查询指定ID的顾问详细信息
-    result = await db.execute(select(Advisor).where(Advisor.id == advisor_id))
+    result = await db.execute(select(Advisor).filter(Advisor.id == advisor_id))
     advisor = result.scalar_one_or_none()
     
     if advisor is None:
         raise HTTPException(status_code=404, detail="Advisor not found")
 
     ontime = None
-    if advisor.complete is not None and advisor.uncomplete is not None:
+    if advisor.complete is not 0 and advisor.uncomplete is not 0:
         ontime = advisor.complete / (advisor.complete + advisor.uncomplete)
     # 查询顾问的评分记录并计算平均评分
     result = await db.execute(
