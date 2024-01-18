@@ -9,7 +9,7 @@ from typing import Optional
 from datetime import datetime
 
 calss AdvisorcoinFlow(BaseModel):
-    amount : Optional[float]
-    notes : Optional[str]
-    is_income : Optional[bool]
-    create_At : Optional[datetime]
+    amount : float
+    notes : str
+    is_income : bool
+    create_At : datetime

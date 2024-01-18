@@ -21,11 +21,11 @@ class Gender(str, enum.Enum):
 
 # 用户基础模型
 class UserBase(BaseModel):
-    name: Optional[str] = Field(None, example="John Doe")
-    birth: Optional[date] = Field(None, example="1980-01-01")
-    gender: Optional[Gender] = Field(None, example="male")
-    bio: Optional[str] = Field(None, example="A short bio here")
-    about: Optional[str] = Field(None, example="More details about the user")
+    name: str = Field(..., example="John Doe")
+    birth: date = Field(..., example="1980-01-01")
+    gender: Gender = Field(..., example="male")
+    bio: str = Field(..., example="A short bio here")
+    about: str = Field(..., example="More details about the user")
 
     class Config:
         use_enum_values = True  # 使枚举字段返回值

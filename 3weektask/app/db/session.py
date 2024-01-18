@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession ,create_async_engine
 from app.db.base import Base
 
-DATABASE_URL = "mysql+aiomysql://work:work2023@localhost/dbxu"
+DATABASE_URL = "mysql+aiomysql://root:xuxinghao123@localhost/dbxu"
 
 async_engine = create_async_engine(DATABASE_URL,echo=True)
 
